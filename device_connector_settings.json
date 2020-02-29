@@ -1,0 +1,18 @@
+{
+  "user_owner": "nicoL97",
+  "deviceID": "dht11-a",
+  "end_point": "http://192.168.43.209:8080/rest",
+  "location": "storage",
+  "resources": [
+    "Temperature",
+    "Humidity"
+  ],
+  "topics": [
+    "nicoL97/storage/dht11-a/Temperature",
+    "nicoL97/storage/dht11-a/Humidity"
+  ],
+  "time_steps": [
+    10,
+    30
+  ]
+}

@@ -1,0 +1,32 @@
+{
+    "nicoL97": {
+        "broker": {
+            "addr": "192.168.43.209",
+            "port": 1883
+        },
+        "connected_devices": [],
+        "user_information": {
+            "userID": "nicoL97",
+            "email_address": "nicololandra97@gmail.com",
+            "password": "123456789"
+        },
+        "services": {
+            "fermentation_control": [],
+            "mash_control": [],
+            "storage_control": [
+                {
+                    "deviceID": "dht11-a",
+                    "raw_material": "Hops",
+                    "thresholds": {
+                        "Temperature": 5,
+                        "Humidity": 60
+                    },
+                    "half_ranges": {
+                        "Temperature": 2,
+                        "Humidity": 5
+                    }
+                }
+            ]
+        }
+    }
+}
