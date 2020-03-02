@@ -1,0 +1,23 @@
+device_connector_settings:
+File json contenente le specifiche del dispositivo:
+-"user_owner": ID dell'utente proprietario del dispositivo
+-"deviceID" : ID del dispositivo
+-"end_point" : url del REST service del dispositivo
+-"location" : destinazione d'uso (es. in magazzino= "storage", in fase di mashing = "mashing" ecc.)
+-"resources" : grandezze misurate del sensore 
+-"topics" : topic nei quali vengono pubblicate le relative misurazioni. Ciscun topic è strutturato nel seguente modo: user_owner/location/deviceID/risorsa
+-"time_steps" : intervalli di tempo che separano due misure consecutive, per ciscun tipo di risorsa (unità di misura secondi)
+
+RPi_device_connector:
+Il programma sfrutta 2 thread differenti, dove il main thread opera la misura e l'invio di dati mediante protocollo mqtt e il secondo thread esegue ad intervalli di tempo regolari (60 secondi) la registrazione del dispositivo con tutte le sue proprietà nel catalog attraverso una richiesta PUT http.
+La misura e l'invio dei dati è disabilitato per default (stop_flag=1 nel client mqtt), quindi quando si desidera avviare il ciclo di misura è necessario agire con un programma esterno invii un messaggio mqtt in json con key 'device_action' e item 'RUN' (io scritto un programma apposta con cui mandare i messaggi di controllo: 'fake_dev_manager.py'), facendo andare lo stop_flag a 0. E' possibile bloccare momentaneamente le misurazioni (inviando {"device_action":"STOP"}), oppure in modo permanente causando inoltre la disconnessione del dispositivo dal catalog e la fine del programma (inviando {"device_action":"DISCONNECTION"}).
+
+catalog:
+file json contenente gli userID di tutti gli utenti iscritti al servizio. Ad ogni ID è associato un dizionario contenente tutte le informazioni sull'utente necessarie per il corretto funzionamento dei servizi:
+-"broker": dizionario contenente l'indirizzo ip del broker (addr) e la porta servita (port). 
+-"connected_devices": lista contenente i dispositivi dell'utente connessi in tempo reale al catalog e le relative info (dizionario costituito da 'device_connector settings'+ timestamp UNIX dell'ultimo refresh di registrazione)
+-"user_information": dizionario contenente lo userID, l'email e password di accesso al servizio
+-"services": dizionario contente 3 liste relative alle 3 tipologie di servizi(mash_control,fermentation_control,storage_control). Ogni lista conterrà i dizonari relativi ai servizi della stessa tipologia (es. storage) in corso. Per fare un esempio posso avere tre magazzini distinti che desidero monitorare contemporaneamente, dove a ciscuno di essi è associato un dizionario di informazioni. I tre dizionari sono contenuti nella lista "storage".
+
+REST_catalog: 
+Il programma si basa su due thread: Il primo, RestCatalog(), si occupa di gestire il web service del catalog, offrendo la possibilità a dispositivi di registrarsi nel catalog mediante una richiesta PUT all'indirizzo codificato dell'uri '/BREWcatalog/userID/add_new_device', a nuovi utenti di registrarsi con una richiesta PUT all'uri '/BREWcatalog/userID/add_new_user', a servizi esterni di richiedere mediante una richiesta GET le infromazioni riguradanti il broker, i device collegati e i servizi in corso di erogazione. Il secondo, deviceRemover(), si occupa di verificare che tutti i dispositivi registrati in "connected_devices" abbiano un timestamp UNIX di registrazione differente NON PIU' di 2 minuti rispetto al timestamp corrente. In caso negativo il dispositivo viene eliminato dalla lista.
