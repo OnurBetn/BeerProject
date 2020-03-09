@@ -36,6 +36,10 @@ class CatalogManager(object):
                         devices_list = user_dict['connected_devices']
                         resp = RetriveAllorOne('one', 'device', uri[3], devices_list).retrive()
                         pass
+                    elif uri[2] == 'user_information':
+                        user_info = user_dict['user_information']
+                        resp = json.dumps(user_info, indent=4)
+                        pass
                     elif uri[2] == 'services':
                         services_dict = user_dict[uri[2]]
                         resp = json.dumps(services_dict,indent=4)
@@ -55,7 +59,7 @@ class CatalogManager(object):
                         pass
                     pass
                 else:
-                    resp = json.dumps({'ERROR':'UserNotFound'})
+                    raise cherrypy.HTTPError(404, "User not found!")
                 pass
             pass
 

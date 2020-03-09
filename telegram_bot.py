@@ -11,7 +11,6 @@ import emoji
 class BeerBot(telepot.helper.ChatHandler):
     def __init__(self, *args, **kwargs):
         super(BeerBot, self).__init__(*args, **kwargs)
-        self.user_pass = {'marioR92':'123456789', 'marcoB93':'1234'} # TODO: sostituire con una GET per avere tutti gli utenti registrati
         self.set_temp_storage = False
         self.step = 1
 
@@ -39,7 +38,9 @@ class BeerBot(telepot.helper.ChatHandler):
 
         elif self.step == 2:
             self.username = msg['text']
-            if self.username in self.user_pass:
+            r = requests.get(URL + '/BREWcatalog/' + self.username + '/user_information')
+            if r.status_code == requests.codes.ok:
+                self.password = r.json()['password']
                 self.sender.sendMessage( 
                                 "Good! Now insert your *password*",
                                 parse_mode='Markdown')
@@ -49,7 +50,7 @@ class BeerBot(telepot.helper.ChatHandler):
 
         elif self.step == 3:
             password = msg['text']
-            if password == self.user_pass[self.username]:
+            if password == self.password:
                 self.sender.sendMessage(
                     f'Access obtained as *{self.username}*!\nNow choose the process you want to control:',
                     parse_mode='Markdown',
@@ -73,7 +74,6 @@ class BeerBot(telepot.helper.ChatHandler):
 
             else:
                 self.sender.sendMessage("Input should be numeric! Try again!")
-
 
     def on_callback_query(self, msg):
         """Function to handle the callback queries generated from inline keyboard.
@@ -118,6 +118,8 @@ class BeerBot(telepot.helper.ChatHandler):
             pass
         return False
 
+
+URL = 'http://localhost:8080'
 TOKEN = '962941325:AAEmgdul_4urnryImw4Rhiz3nsEAG3lz068'
 
 bot = telepot.DelegatorBot(TOKEN, [
