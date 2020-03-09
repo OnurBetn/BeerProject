@@ -1,13 +1,13 @@
 {
-    "nicoL97": {
+    "marioR92": {
         "broker": {
-            "addr": "192.168.43.209",
+            "addr": "test.mosquitto.org",
             "port": 1883
         },
         "connected_devices": [],
         "user_information": {
-            "userID": "nicoL97",
-            "email_address": "nicololandra97@gmail.com",
+            "userID": "marioR92",
+            "email_address": "mariorossi92@gmail.com",
             "password": "123456789"
         },
         "services": {
@@ -18,13 +18,10 @@
                     "deviceID": "dht11-a",
                     "raw_material": "Hops",
                     "thresholds": {
-                        "Temperature": 5,
+                        "Temperature": 22,
                         "Humidity": 60
                     },
-                    "half_ranges": {
-                        "Temperature": 2,
-                        "Humidity": 5
-                    }
+                    "status": 0
                 }
             ]
         }

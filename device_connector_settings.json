@@ -1,5 +1,5 @@
 {
-  "user_owner": "nicoL97",
+  "user_owner": "marioR92",
   "deviceID": "dht11-a",
   "end_point": "http://192.168.43.209:8080/rest",
   "location": "storage",
@@ -7,9 +7,13 @@
     "Temperature",
     "Humidity"
   ],
+  "units": [
+    "Cel",
+    "%"
+  ],
   "topics": [
-    "nicoL97/storage/dht11-a/Temperature",
-    "nicoL97/storage/dht11-a/Humidity"
+    "marioR92/storage/dht11-a/Temperature",
+    "marioR92/storage/dht11-a/Humidity"
   ],
   "time_steps": [
     10,

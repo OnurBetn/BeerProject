@@ -14,7 +14,7 @@ class DeviceManager_mqtt(object):
 
     def notify(self,topic,payload):
         self.msg_dict = json.loads(payload)
-        print(f'{topic}: {self.msg_dict}')
+        print(f'{topic}:\n {self.msg_dict}')
         return
 
     def run(self):
@@ -38,11 +38,12 @@ class DeviceManager_mqtt(object):
         self.dev_man.myPublish(self.topic, self.msg)
 
 if __name__ == '__main__':
-    device_manager = DeviceManager_mqtt('192.168.43.209',1883)
+    user_ID = 'marioR92'
+    device_manager = DeviceManager_mqtt('test.mosquitto.org',1883)
     device_manager.run()
-    device_manager.subscribe("nicoL97/storage/dht11-a/Temperature")
-    device_manager.subscribe("nicoL97/storage/dht11-a/Humidity")
-    topic = 'nicoL97/dht11-a/dev_manager'
+    device_manager.subscribe(user_ID + "/storage" +"/dht11-a")
+    device_manager.subscribe(user_ID + "/dht11-a/dev_manager")
+    topic = user_ID + '/dht11-a/dev_manager'
     while True:
         device_manager.publish(topic)
         time.sleep(2)
