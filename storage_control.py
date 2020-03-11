@@ -64,7 +64,7 @@ if __name__ == '__main__':
             change_flag = 0
             for warehouse_dict in storage_list:
                 device = requests.get(device_url + warehouse_dict['deviceID']).json()
-                if 'ERROR' not in device and warehouse_threads =={}:
+                if 'ERROR' not in device and warehouse_dict['status'] == 0:
                     thread = warehouseThread(user_ID, device['deviceID'], broker_dict, warehouse_dict['thresholds'])
                     thread.start()
                     warehouse_threads[device['deviceID']] = thread
@@ -73,14 +73,15 @@ if __name__ == '__main__':
                     pass
 
                 elif 'ERROR' in device and warehouse_dict['status'] == 1:
-                    if warehouse_threads != {}:
+                    if warehouse_dict['deviceID'] in warehouse_threads:
                         warehouse_threads[warehouse_dict['deviceID']].exit()
                         warehouse_threads.pop(warehouse_dict['deviceID'])
+                        print(f'{warehouse_dict["deviceID"]} DISCONNECTED')
                     warehouse_dict['status'] = 0
                     change_flag = 1
                     pass
                 elif 'ERROR' in device and warehouse_dict['status'] == 0:
-                    print('NO')
+                    print(f'{warehouse_dict["deviceID"]} not CONNECTED')
                 pass
             if change_flag == 1:
                 response_dict['storage'] = storage_list
