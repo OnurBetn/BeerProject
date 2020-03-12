@@ -1,5 +1,4 @@
 {
-    "marioR92": {
         "broker": {
             "addr": "192.168.43.209",
             "port": 1883
@@ -18,12 +17,14 @@
                     "deviceID": "dht11-a",
                     "raw_material": "Hops",
                     "thresholds": {
-                        "Temperature": 22,
+                        "Temperature": 5,
                         "Humidity": 60
                     },
-                    "status": 0
+                    "half_ranges": {
+                        "Temperature": 2,
+                        "Humidity": 5
+                    }
                 }
             ]
         }
-    }
 }

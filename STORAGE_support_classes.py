@@ -28,6 +28,7 @@ class ServiceMQTT(object):
         return
 
     def end(self):
+        self.analytic_unit.alert_publ.end()
         self.service.stop()
         return
 
@@ -37,7 +38,13 @@ class ServiceMQTT(object):
 
     def subscribe(self, topic):
         self.service.mySubscribe(topic)
-        pass
+        return
+
+    def updateThreshold(self,new_tsh):
+        if self.tsh_dict != new_tsh:
+            self.tsh_dict = new_tsh
+            pass
+        return
 
 class AlertPublisher(object):
 

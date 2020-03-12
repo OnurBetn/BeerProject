@@ -11,145 +11,117 @@ class CatalogManager(object):
     def __init__(self):
         return
 
-    def GET(self,*uri,**params):
+    def GET(self,*uri):
         resp = ''
-        if len(uri)>=3:
-            threadLock.acquire()
-            file_catalog = open("catalog.json", "r")
-            catalog_json = file_catalog.read()
-            file_catalog.close()
-            threadLock.release()
-            catalog_dict = json.loads(catalog_json)
-            if uri[0] == 'BREWcatalog':
-
-                if uri[1] in catalog_dict:
-                    user_dict = catalog_dict[uri[1]]
-                    if uri[2] == 'broker':
-                        broker_dict = user_dict["broker"]
-                        resp = json.dumps(broker_dict, indent=4)
-                        pass
-                    elif uri[2] == 'devices':
-                        devices_list = user_dict['connected_devices']
-                        resp = RetriveAllorOne('all', 'device', None, devices_list).retrive()
-                        pass
-                    elif uri[2] == 'specific_device' and len(uri) == 4:
-                        devices_list = user_dict['connected_devices']
-                        resp = RetriveAllorOne('one', 'device', uri[3], devices_list).retrive()
-                        pass
-                    elif uri[2] == 'user_information':
-                        user_info = user_dict['user_information']
-                        resp = json.dumps(user_info, indent=4)
-                        pass
-                    elif uri[2] == 'services':
-                        services_dict = user_dict[uri[2]]
-                        resp = json.dumps(services_dict,indent=4)
-                        if len(uri)==4:
-                            if uri[3] == 'storage':
-                                stores_list = services_dict['storage_control']
-                                resp = json.dumps({uri[3]: stores_list})
-                                pass
-                            elif uri[3] == 'mash':
-                                kettles_list = services_dict['mash_control']
-                                resp = json.dumps({uri[3]: kettles_list})
-                                pass
-                            elif uri[3] == 'fermentation':
-                                fermenters_list = services_dict['fermentation_control']
-                                resp = json.dumps({uri[3]: fermenters_list})
-                                pass
-                        pass
-                    pass
-                else:
-                    raise cherrypy.HTTPError(404, "User not found!")
-                pass
-            pass
-
-        elif len(uri)==1:
-            threadLock.acquire()
-            file_catalog = open("catalog.json", "r")
-            catalog_json = file_catalog.read()
-            file_catalog.close()
-            threadLock.release()
-            if uri[0] == 'BREWcatalog':
-                resp = catalog_json
-                pass
-        return resp
-
-    def PUT(self,*uri,**params):
         threadLock.acquire()
         file_catalog = open("catalog.json", "r")
         catalog_json = file_catalog.read()
         file_catalog.close()
         threadLock.release()
         catalog_dict = json.loads(catalog_json)
-        resp = ''
-        if len(uri)==3 :
-            if uri[0] == 'BREWcatalog' and uri[1] in catalog_dict:
-                user_dict = catalog_dict[uri[1]]
-                if uri[2] == 'add_new_device':
-                    data = cherrypy.request.body.read()
-                    data_dict = json.loads(data)
-                    if 'insert-timestamp' in data_dict and 'deviceID' in data_dict:
-                        devices_list = user_dict['connected_devices']
-                        new_dev = data_dict
-                        new_list = CatalogResearch(new_dev, 'deviceID', devices_list).search()
-                        user_dict['connected_devices'] = new_list
-                        catalog_dict[uri[1]] = user_dict
-                        threadLock.acquire()
-                        file_catalog = open("catalog.json", "w")
-                        file_catalog.write(json.dumps(catalog_dict, indent=4))
-                        file_catalog.close()
-                        threadLock.release()
-                        pass
-                    else:
-                        resp = json.dumps({'ERROR':'ParametersError'})
-                        pass
-                    pass
+        if uri[0] == 'BREWcatalog':
+            resp = catalog_json
 
+            if uri[1] in catalog_dict:
+                resp = json.dumps(catalog_dict[uri[1]], indent=4)
+                user_dict = catalog_dict[uri[1]]
+                if uri[2] == 'broker':
+                    broker_dict = user_dict["broker"]
+                    resp = json.dumps(broker_dict, indent=4)
+                    pass
+                elif uri[2] == 'devices':
+                    devices_list = user_dict['connected_devices']
+                    resp = RetriveAllorOne('all', 'device', None, devices_list).retrive()
+                    pass
+                elif uri[2] == 'specific_device' and len(uri) == 4:
+                    devices_list = user_dict['connected_devices']
+                    resp = RetriveAllorOne('one', 'device', uri[3], devices_list).retrive()
+                    pass
+                elif uri[2] == 'services':
+                    services_dict = user_dict[uri[2]]
+                    resp = json.dumps(services_dict, indent=4)
+                    if len(uri) == 4:
+                        if uri[3] in services_dict:
+                            stores_list = services_dict[uri[3]]
+                            resp = json.dumps({uri[3]: stores_list})
+                            pass
+                    pass
                 pass
+            else:
+                resp = json.dumps({'ERROR': 'UserNotFound'})
             pass
 
-        elif len(uri) == 2:
-            if uri[0] == 'BREWcatalog' and uri[1] == 'add_new_user':
+        return resp
+
+    def PUT(self,*uri):
+        threadLock.acquire()
+        file_catalog = open("catalog.json", "r")
+        catalog_json = file_catalog.read()
+        file_catalog.close()
+        threadLock.release()
+        catalog_dict = json.loads(catalog_json)
+        flag = 0
+
+        if uri[0] == 'BREWcatalog':
+            if uri[1] == 'add_new_user':
                 data = cherrypy.request.body.read()
                 data_dict = json.loads(data)
                 if 'user_information' in data_dict:
                     new_user = data_dict
                     new_infos = new_user['user_information']
                     catalog_dict[new_infos['userID']] = new_user
-                    threadLock.acquire()
-                    file_catalog = open("catalog.json", "w")
-                    file_catalog.write(json.dumps(catalog_dict, indent=4))
-                    file_catalog.close()
-                    threadLock.release()
-                    pass
-                else:
-                    resp = json.dumps({'ERROR':'ParametersError'})
+                    flag = 1
                     pass
                 pass
-            pass
-
-        elif len(uri) == 4:
-            if uri[0] == 'BREWcatalog' and uri[1] in catalog_dict:
-                user_dict = catalog_dict[uri[1]]
-                if uri[2] == 'services':
-                    services_dict = user_dict['services']
-                    data = cherrypy.request.body.read()
-                    data_dict = json.loads(data)
-                    if uri[3] == 'storage':
-                        services_dict['storage_control'] = data_dict['storage']
-                        user_dict['services'] = services_dict
-                        catalog_dict[uri[1]] = user_dict
-                        threadLock.acquire()
-                        file_catalog = open("catalog.json", "w")
-                        file_catalog.write(json.dumps(catalog_dict, indent=4))
-                        file_catalog.close()
-                        threadLock.release()
+            else:
+                if uri[1] in catalog_dict:
+                    user_dict = catalog_dict[uri[1]]
+                    if uri[2] == 'add_new_device':
+                        data = cherrypy.request.body.read()
+                        data_dict = json.loads(data)
+                        if 'insert-timestamp' in data_dict and 'deviceID' in data_dict:
+                            devices_list = user_dict['connected_devices']
+                            new_dev = data_dict
+                            new_list = CatalogResearch(new_dev, 'deviceID', devices_list).search()
+                            user_dict['connected_devices'] = new_list
+                            catalog_dict[uri[1]] = user_dict
+                            flag = 1
+                            pass
+                        pass
+                    elif uri[2] == 'services':
+                        services_dict = user_dict['services']
+                        if uri[3] in services_dict:
+                            service_type = uri[3]
+                            data = cherrypy.request.body.read()
+                            data_dict = json.loads(data)
+                            if len(uri) == 4:
+                                services_dict[service_type] = data_dict[service_type]
+                                user_dict['services'] = services_dict
+                                catalog_dict[uri[1]] = user_dict
+                                flag = 1
+                                pass
+                            else:
+                                new_list = CatalogResearch(data_dict, 'deviceID', services_dict[service_type]).search()
+                                services_dict[service_type] = new_list
+                                user_dict['services'] = services_dict
+                                catalog_dict[uri[1]] = user_dict
+                                flag = 1
+                                pass
+                            pass
                         pass
                     pass
                 pass
             pass
 
-        return resp
+        if flag == 1:
+            threadLock.acquire()
+            file_catalog = open("catalog.json", "w")
+            file_catalog.write(json.dumps(catalog_dict, indent=4))
+            file_catalog.close()
+            threadLock.release()
+            pass
+
+        return
 
     def DELETE(self,*uri):
         threadLock.acquire()
@@ -174,8 +146,6 @@ class CatalogManager(object):
         return resp
 
 
-
-
 class RestCatalog(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -184,20 +154,21 @@ class RestCatalog(threading.Thread):
     def run(self):
         conf = {
             '/':{
-                'request.dispatch':cherrypy.dispatch.MethodDispatcher(),
+                'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
                 'tools.sessions.on': True
             }
         }
 
-        cherrypy.tree.mount(CatalogManager(),'/',conf)
+        cherrypy.tree.mount(CatalogManager(), '/', conf)
 
-        cherrypy.config.update({'server.socket_host':'0.0.0.0'})
-        cherrypy.config.update({'server.socket_port':8080})
+        cherrypy.config.update({'server.socket_host': '0.0.0.0'})
+        cherrypy.config.update({'server.socket_port': 8080})
 
         cherrypy.engine.start()
         cherrypy.engine.block()
 
         return
+
 
 class deviceRemover(threading.Thread):
     def __init__(self):

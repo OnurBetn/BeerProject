@@ -36,8 +36,6 @@ class warehouseThread (threading.Thread):
         pass
 
 
-
-
 if __name__ == '__main__':
     warehouse_threads = {}
     catalog_addr = 'http://192.168.43.169:8080/BREWcatalog'
@@ -50,7 +48,7 @@ if __name__ == '__main__':
     topic = user_ID+'/storage'
     broker_dict = requests.get(catalog_addr +'/'+user_ID+'/broker').json()
 
-    storage_url = catalog_addr+'/'+user_ID+'/services/storage'
+    storage_url = catalog_addr+'/'+user_ID+'/services/storage_control'
     device_url = catalog_addr+'/'+user_ID+'/specific_device/'
 
     change_flag = 0
@@ -60,36 +58,48 @@ if __name__ == '__main__':
         if 'ERROR' in response_dict:
             break
         else:
-            storage_list = response_dict['storage']
+            storage_list = response_dict['storage_control']
             change_flag = 0
             for warehouse_dict in storage_list:
                 device = requests.get(device_url + warehouse_dict['deviceID']).json()
-                if 'ERROR' not in device and warehouse_dict['status'] == 0:
-                    thread = warehouseThread(user_ID, device['deviceID'], broker_dict, warehouse_dict['thresholds'])
-                    thread.start()
-                    warehouse_threads[device['deviceID']] = thread
-                    warehouse_dict['status'] = 1
-                    change_flag = 1
+                if 'ERROR' not in device:
+                    if warehouse_dict['status'] == 0:
+                        thread = warehouseThread(user_ID, device['deviceID'], broker_dict, warehouse_dict['thresholds'])
+                        thread.start()
+                        warehouse_threads[device['deviceID']] = thread
+                        warehouse_dict['status'] = 1
+                        change_flag = 1
+                        pass
+                    else:
+                        if warehouse_dict['deviceID'] in warehouse_threads:
+                            warehouse_threads[warehouse_dict['deviceID']].storage_mqtt.updateThreshold(warehouse_dict['thresholds'])
+                            pass
+                        else:
+                            thread = warehouseThread(user_ID, device['deviceID'], broker_dict,warehouse_dict['thresholds'])
+                            thread.start()
+                            warehouse_threads[device['deviceID']] = thread
+                        pass
                     pass
+                else:
+                    if warehouse_dict['status'] == 0:
+                        print(f'{warehouse_dict["deviceID"]} not CONNECTED')
+                        pass
+                    else:
+                        if warehouse_dict['deviceID'] in warehouse_threads:
+                            warehouse_threads[warehouse_dict['deviceID']].exit()
+                            warehouse_threads.pop(warehouse_dict['deviceID'])
+                            print(f'{warehouse_dict["deviceID"]} DISCONNECTED')
+                            pass
+                        warehouse_dict['status'] = 0
+                        change_flag = 1
+                        pass
+                    pass
+                if change_flag == 1:
+                    requests.put(storage_url + '/' + warehouse_dict['deviceID'], data=json.dumps(warehouse_dict))
+                    pass
+                pass
 
-                elif 'ERROR' in device and warehouse_dict['status'] == 1:
-                    if warehouse_dict['deviceID'] in warehouse_threads:
-                        warehouse_threads[warehouse_dict['deviceID']].exit()
-                        warehouse_threads.pop(warehouse_dict['deviceID'])
-                        print(f'{warehouse_dict["deviceID"]} DISCONNECTED')
-                    warehouse_dict['status'] = 0
-                    change_flag = 1
-                    pass
-                elif 'ERROR' in device and warehouse_dict['status'] == 0:
-                    print(f'{warehouse_dict["deviceID"]} not CONNECTED')
-                pass
-            if change_flag == 1:
-                response_dict['storage'] = storage_list
-                requests.put(storage_url, data=json.dumps(response_dict))
-                pass
-            else:
-                time.sleep(5)
-            pass
+            time.sleep(5)
         pass
 
 

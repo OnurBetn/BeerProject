@@ -39,7 +39,7 @@ class DeviceManager_mqtt(object):
 
 if __name__ == '__main__':
     user_ID = 'marioR92'
-    device_manager = DeviceManager_mqtt('test.mosquitto.org',1883)
+    device_manager = DeviceManager_mqtt('192.168.43.209',1883)
     device_manager.run()
     device_manager.subscribe(user_ID + "/storage" +"/dht11-a")
     device_manager.subscribe(user_ID + "/dht11-a/dev_manager")
