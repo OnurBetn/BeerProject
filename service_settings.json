@@ -1,0 +1,9 @@
+{
+  "deviceID": "",
+  "active_resources": [],
+  "thresholds": {
+    "Temperature": 0,
+    "Humidity": 0
+  },
+  "status": 0
+}
