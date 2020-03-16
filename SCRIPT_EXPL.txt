@@ -1,16 +1,20 @@
+
 device_connector_settings:
 File json contenente le specifiche del dispositivo:
 -"user_owner": ID dell'utente proprietario del dispositivo
 -"deviceID" : ID del dispositivo
--"end_point" : url del REST service del dispositivo
--"location" : destinazione d'uso (es. in magazzino= "storage", in fase di mashing = "mashing" ecc.)
+-"end_point" : url di partenza del REST service del dispositivo
+-"location" : destinazione d'uso (es. in magazzino= "storage_control", in fase di mashing = "mash_control" ecc.)
 -"resources" : grandezze misurate del sensore 
--"topics" : topic nei quali vengono pubblicate le relative misurazioni. Ciscun topic è strutturato nel seguente modo: user_owner/location/deviceID/risorsa
+-"topics" : > event_notify: topic specifico del device col quale pubblica le misure
+            > manager: topic con il quale vengono scambiati messagi di gestione del device e allerte
 -"time_steps" : intervalli di tempo che separano due misure consecutive, per ciscun tipo di risorsa (unità di misura secondi)
 
 RPi_device_connector:
-Il programma sfrutta 2 thread differenti, dove il main thread opera la misura e l'invio di dati mediante protocollo mqtt e il secondo thread esegue ad intervalli di tempo regolari (60 secondi) la registrazione del dispositivo con tutte le sue proprietà nel catalog attraverso una richiesta PUT http.
-La misura e l'invio dei dati è disabilitato per default (stop_flag=1 nel client mqtt), quindi quando si desidera avviare il ciclo di misura è necessario agire con un programma esterno invii un messaggio mqtt in json con key 'device_action' e item 'RUN' (io scritto un programma apposta con cui mandare i messaggi di controllo: 'fake_dev_manager.py'), facendo andare lo stop_flag a 0. E' possibile bloccare momentaneamente le misurazioni (inviando {"device_action":"STOP"}), oppure in modo permanente causando inoltre la disconnessione del dispositivo dal catalog e la fine del programma (inviando {"device_action":"DISCONNECTION"}).
+Il programma sfrutta 3 thread differenti, dove il main thread opera la misura e l'invio di dati mediante protocollo mqtt e alla modifica dello stato dei relays in caso di allerte di overflow delle misure ricevuti da appositi servizi. Il secondo thread esegue ad intervalli di tempo regolari (60 secondi) la registrazione del dispositivo con tutte le sue proprietà nel catalog attraverso una richiesta PUT http.
+Il terzo thread genera il rest service dal quale è possibile ottenere le misura in tempo reale delle risorse del device mediante l'uri
+https://ipaddress/rest/get_measure/[resource].
+La misura e l'invio dei dati è disabilitato per default (stop_flag=1 nel client mqtt), quindi quando si desidera avviare il ciclo di misura è necessario avviare un servizio di monitoraggio che si inizializzerà inviando un messaggio di RUN con le risorse che intende ricevere dal device (active_resources), facendo andare lo stop_flag a 0. E' possibile bloccare momentaneamente le misurazioni (inviando {"device_action":"STOP"}), oppure in modo permanente causando inoltre la disconnessione del dispositivo dal catalog e la fine del programma (inviando {"device_action":"DISCONNECTION"}).
 
 catalog:
 file json contenente gli userID di tutti gli utenti iscritti al servizio. Ad ogni ID è associato un dizionario contenente tutte le informazioni sull'utente necessarie per il corretto funzionamento dei servizi:
@@ -19,5 +23,93 @@ file json contenente gli userID di tutti gli utenti iscritti al servizio. Ad ogn
 -"user_information": dizionario contenente lo userID, l'email e password di accesso al servizio
 -"services": dizionario contente 3 liste relative alle 3 tipologie di servizi(mash_control,fermentation_control,storage_control). Ogni lista conterrà i dizonari relativi ai servizi della stessa tipologia (es. storage) in corso. Per fare un esempio posso avere tre magazzini distinti che desidero monitorare contemporaneamente, dove a ciscuno di essi è associato un dizionario di informazioni. I tre dizionari sono contenuti nella lista "storage".
 
-REST_catalog: 
+CARALOG.py: 
 Il programma si basa su due thread: Il primo, RestCatalog(), si occupa di gestire il web service del catalog, offrendo la possibilità a dispositivi di registrarsi nel catalog mediante una richiesta PUT all'indirizzo codificato dell'uri '/BREWcatalog/userID/add_new_device', a nuovi utenti di registrarsi con una richiesta PUT all'uri '/BREWcatalog/userID/add_new_user', a servizi esterni di richiedere mediante una richiesta GET le infromazioni riguradanti il broker, i device collegati e i servizi in corso di erogazione. Il secondo, deviceRemover(), si occupa di verificare che tutti i dispositivi registrati in "connected_devices" abbiano un timestamp UNIX di registrazione differente NON PIU' di 2 minuti rispetto al timestamp corrente. In caso negativo il dispositivo viene eliminato dalla lista.
+
+richieste al RestCatalog:
+GET: -BREWcatalog:
+            -response: file json dell'intero catalog
+     -BREWcatalog/[userID]:
+            -response: file json della sezione didicata all'user nel catalog
+     -BREWcatalog/[userID]/broker:
+            -response: file json contente le informazioni sul message broker con il seguente formato
+
+        {
+            "addr": "192.168.43.209",
+            "port": 1883
+        }
+
+     -BREWcatalog/[userID]/devices:
+            -response: file json contente la lista dei dizionari dei devices connessi al catalog con il seguente formato:
+
+            { "device": [...]}
+
+     -BREWcatalog/[userID]/specific_device/[deviceID]:
+            -response: file json contente le informazioni relative al device di interesse. Se il device ricercato non è connesso restituisce il file json
+            {"ERROR": "deviceID NotFound"}
+
+     -BREWcatalog/[userID]/services:
+            -response: file json con il seguente formato esemplificativo:
+            
+            {
+
+            "fermentation_control": [...],
+            "mash_control": [...],
+            "storage_control": [...]
+
+            }
+            
+            ogni lista conterrà i dizionari con le informazioni relative ai servizi che si vuole attivare. Ogni dizionario rappresenterà un magazzino, una               stanza di fermentazione oppure un tino di ammostamento. Ogni dizionario conterrà un solo device e le impostazioni di monitoraggio.
+
+     -BREWcatalog/[userID]/services/[service_type]:
+            -response: file jason contenente la lista dei servizi di controllo per quel particolare tipologia di servizio:
+            
+            {"fermentation_control": [...]}
+
+     -BREWcatalog/[userID]/user_information:
+            -response: file json contente le infromazioni dell'user (userID,email_address, password).
+
+PUT: -BREWcatalog/add_new_user:
+            -request: file json nel body, contente tutte le infromazioni dell'user, settings, servizi e devices da inserire nel catalog o per aggiornare un  
+             user esistente
+     -BREWcatalog/[userID]/add_new_device:
+            -request: file json nel body, contente le informazioni del device_connector_setting + l'insert-timestamp da aggiungere alla lista dei
+             connected_devices, oppure per aggiornare uno già presente.
+     -BREWcatalog/[userID]/services/[service_type]:
+            -request: file json nel body, contente la lista dei servizi offerti per la tipologia specificata nell'uri:
+
+            {[service_type]: [{...},{...},...,{...}]}
+
+     -BREWcatalog/[userID]/services/[service_type]/[deviceID]:
+            -request: file json nel body, contente le informazioni del servizio (vedi service_settings) relativo al device con [deviceID] specificato  
+             nell'uri
+
+     -BREWcatalog/[userID]/services/[service_type]/[deviceID]/update_tsh:
+            -request: file json nel body, contente la nuova soglia, espressa in numero intero, che si vuole sostituire nel servizio specifico, associata
+             alla relativa risorsa (ATTENZIONE: con questa operazione si possono SOLO aggiornare le soglie già presenti e non aggiungerne di nuove):
+
+             esempio > { "Temperature": 17 } oppure { "Temperature": 17, "Humidity": 62}
+
+     -BREWcatalog/[userID]/services/[service_type]/[deviceID]/update_active_res:
+            -request: file json nel body, contente la lista delle resources di cui si è interessati ad avere il monitoraggio. Il device_connector
+             del dispositivo di interesse opererà ad inviare unicamente le misure relative alle risorse contenute nella lista active_resources del servizio
+
+             esempio > {"resources_list": ["Temperature"]}
+
+             se una delle risorse ricevute non è prevista tra le risorse erogabili dal specifico device, questa verrà comunque inserita nel catalog,
+             il servizio non riceverà alcuna misura relativa a quella risorsa.
+
+DELETE: 
+     -BREWcatalog/[userID]/delete_user:
+             l'intero paragrafo relativo all'user espresso nell'uri viene eliminato dal catalog
+
+
+service_settings:
+-"deviceID"
+-"active_resources": lista contente le risorse che si vogliono monitorare. Devono far parte delle risorse disponibili del device.
+-"thresholds": Dizionario contente le soglie per ciascuna risorsa erogabile dal device
+-"status": può assumere valore 0 (servizio non attivo) oppure 1 (servizio attivo).
+
+
+
+
