@@ -2,7 +2,7 @@
   "user_owner": "marioR92",
   "deviceID": "dht11-a",
   "end_point": "http://192.168.43.209:8080/rest",
-  "location": "storage",
+  "location": "storage_control",
   "resources": [
     "Temperature",
     "Humidity"
@@ -11,12 +11,12 @@
     "Cel",
     "%"
   ],
-  "topics": [
-    "marioR92/storage/dht11-a/Temperature",
-    "marioR92/storage/dht11-a/Humidity"
-  ],
+  "topics": {
+    "event_notify": "marioR92/storage_control/dht11-a",
+    "manager": "marioR92/dht11-a/dev_manager"
+  },
   "time_steps": [
-    10,
-    30
+    5,
+    20
   ]
 }

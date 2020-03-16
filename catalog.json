@@ -11,15 +11,31 @@
             "password": "123456789"
         },
         "services": {
-            "fermentation_control": [],
+            "fermentation_control": [
+                {
+                    "deviceID": "dht11-b",
+                    "active_resources": [
+                        "Temperature",
+                        "Humidity"
+                    ],
+                    "thresholds": {
+                        "Temperature": 27,
+                        "Humidity": 83
+                    },
+                    "status": 0
+                }
+            ],
             "mash_control": [],
             "storage_control": [
                 {
                     "deviceID": "dht11-a",
-                    "raw_material": "Hops",
+                    "active_resources": [
+                        "Temperature",
+                        "Humidity"
+                    ],
                     "thresholds": {
-                        "Temperature": 22,
-                        "Humidity": 60
+                        "Temperature": 31,
+                        "Humidity": 62
                     },
                     "status": 0
                 }
