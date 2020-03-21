@@ -8,6 +8,7 @@ from datetime import datetime
 import requests
 import emoji
 import json
+from MyMQTT import MyMQTT
 
 
 class BeerBot(telepot.helper.ChatHandler):
@@ -29,6 +30,7 @@ class BeerBot(telepot.helper.ChatHandler):
 
     def __init__(self, *args, **kwargs):
         super(BeerBot, self).__init__(*args, **kwargs)
+        self.alert_started = False
         self.set_thresh = False
         self.resources = []
         self.step = 1
@@ -45,6 +47,10 @@ class BeerBot(telepot.helper.ChatHandler):
 
         if content_type != 'text':
             self.sender.sendMessage('Message type not supported!')
+            return
+
+        if self.alert_started and msg['text'] != '/alertstop':
+            self.sender.sendMessage('Please stop alert to use the bot again!')
             return
 
         if msg['text'] == '/start' or self.step == 1:
@@ -68,11 +74,15 @@ class BeerBot(telepot.helper.ChatHandler):
         elif self.step == 3:
             password = msg['text']
             if password == self.password:
+                broker = requests.get(CATALOG_URL + self.username + '/broker').json()
+                self.alert_handler = MyMQTT('Alert_'+self.username, broker['addr'], broker['port'], self)
+
                 self.sender.sendMessage(
                     f'Access obtained as *{self.username}*!\nNow choose the process you want to control:',
                     parse_mode='Markdown',
                     reply_markup=self.keyboard_1
                 )
+
                 self.step += 1
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 print(f"[{now}][{self.username}] Access obtained")
@@ -98,6 +108,36 @@ class BeerBot(telepot.helper.ChatHandler):
             else:
                 self.sender.sendMessage("Input should be numeric! Try again!")
 
+        elif msg['text'] == '/alertstart':
+            self.alert_handler.start()
+            self.alert_handler.mySubscribe(self.username + '/+/dev_manager')
+            self.alert_started = True
+            self.sender.sendMessage("Alert started!")
+
+        elif msg['text'] == '/alertstop':
+            if self.alert_started:
+                self.alert_handler.stop()
+                self.alert_started = False
+                self.sender.sendMessage("Alert stopped!")
+                self.sender.sendMessage(
+                    f'Choose the process you want to control:',
+                    parse_mode='Markdown',
+                    reply_markup=self.keyboard_1
+                )
+            else:
+                self.sender.sendMessage("Alert already stopped!")
+
+        else:
+            self.sender.sendMessage("I don't understand you...")
+
+    def is_number(self, s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            pass
+        return False
+
     def on_callback_query(self, msg):
         """Function to handle the callback queries generated from inline keyboard.
 	
@@ -107,6 +147,10 @@ class BeerBot(telepot.helper.ChatHandler):
             message received
 		"""
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+
+        if self.alert_started:
+            self.sender.sendMessage('Please stop alert to use the bot again!')
+            return
 
         if query_data == 'storage':
             self.bot.answerCallbackQuery(query_id, text='Retrieving connected devices...')
@@ -245,13 +289,18 @@ class BeerBot(telepot.helper.ChatHandler):
                         )
                     )
 
-    def is_number(self, s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            pass
-        return False
+    def notify(self, topic, msg):
+        msg_dict = json.loads(msg)
+        deviceID = topic.split('/')[1]
+        if 'ALERT' in msg_dict:
+            msg_dict = msg_dict['ALERT']
+            if msg_dict['alert_status']:
+                now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                print(f"[{now}][{self.username}] {msg_dict['resource']} ALERT received for device {deviceID}")
+                self.sender.sendMessage( 
+                                emoji.emojize(f":warning: *WARNING - {deviceID}* :warning:\n{msg_dict['resource']} over the threshold!"),
+                                parse_mode='Markdown'
+                                )
 
 
 CATALOG_URL = 'http://localhost:8080/BREWcatalog/'
