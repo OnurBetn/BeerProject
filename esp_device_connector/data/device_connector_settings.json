@@ -1,0 +1,22 @@
+{
+  "user_owner": "marioR92",
+  "deviceID": "dht11-b",
+  "end_point": "http://localhost:8090/rest",
+  "location": "fermentation_control",
+  "resources": [
+    "Temperature",
+    "Humidity"
+  ],
+  "units": [
+    "Cel",
+    "%"
+  ],
+  "topics": {
+    "event_notify": "marioR92/fermentation_control/dht11-b",
+    "manager": "marioR92/dht11-b/dev_manager"
+  },
+  "time_steps": [
+    5,
+    20
+  ]
+}
