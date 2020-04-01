@@ -1,9 +1,9 @@
 {
   "deviceID": "",
   "active_resources": [],
-  "thresholds": {
-    "Temperature": 0,
-    "Humidity": 0
-  },
+  "thresholds": {},
+  "incert_ranges": {},
+  "timings": {},
+  "trend_flag": 0,
   "status": 0
 }
