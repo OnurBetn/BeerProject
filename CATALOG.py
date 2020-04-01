@@ -47,6 +47,19 @@ class CatalogManager(object):
                                         stores_list = services_dict[uri[3]]
                                         resp = json.dumps({uri[3]: stores_list})
                                         pass
+                                    else:
+                                        if uri[3] == 'list':
+                                            serv_list = []
+                                            for key in services_dict:
+                                                serv_list.append(key)
+                                                pass
+                                            resp = json.dumps({'services_list': serv_list})
+                                            pass
+                                        else:
+                                            resp = json.dumps({'ERROR': 'ServiceNotFound'})
+                                            pass
+                                        pass
+                                    pass
                                 pass
                             elif uri[2] == 'user_information':
                                 user_info = user_dict['user_information']
@@ -122,7 +135,7 @@ class CatalogManager(object):
                                                         user_dict['services'] = services_dict
                                                         catalog_dict[uri[1]] = user_dict
                                                         pass
-                                                    if uri[5] == 'update_active_res':
+                                                    elif uri[5] == 'update_active_res':
                                                         for device in services_dict[service_type]:
                                                             if uri[4] == device['deviceID']:
                                                                 device['active_resources'] = data_dict['resources_list']
@@ -131,6 +144,19 @@ class CatalogManager(object):
                                                         user_dict['services'] = services_dict
                                                         catalog_dict[uri[1]] = user_dict
                                                         pass
+                                                    elif uri[5] == 'update_timings':
+                                                        for device in services_dict[service_type]:
+                                                            if uri[4] == device['deviceID']:
+                                                                for resource in data_dict:
+                                                                    if resource in device['timings']:
+                                                                        device['timings'][resource] = data_dict[resource]
+                                                                        flag = 1
+                                                                        pass
+                                                                    pass
+                                                                pass
+                                                            pass
+                                                        user_dict['services'] = services_dict
+                                                        catalog_dict[uri[1]] = user_dict
                                                     pass
                                                 else:
                                                     new_list = CatalogResearch(data_dict, 'deviceID',services_dict[service_type]).search()
