@@ -331,6 +331,10 @@ class BeerBot(telepot.helper.ChatHandler):
                                 parse_mode='Markdown'
                                 )
 
+    def on_close(self, ex):
+        print(f"[{now}]Bot Closed")
+        self.sender.sendMessage("Session closed. Type /start to start again.")
+
 
 CATALOG_URL = 'http://localhost:8080/BREWcatalog/'
 TOKEN = '962941325:AAEmgdul_4urnryImw4Rhiz3nsEAG3lz068'
@@ -338,7 +342,7 @@ TOKEN = '962941325:AAEmgdul_4urnryImw4Rhiz3nsEAG3lz068'
 bot = telepot.DelegatorBot(TOKEN, [
     include_callback_query_chat_id(
         pave_event_space())(
-            per_chat_id(types=['private']), create_open, BeerBot, timeout=1000),
+            per_chat_id(types=['private']), create_open, BeerBot, timeout=3600),
 ])
 MessageLoop(bot).run_as_thread()
 
