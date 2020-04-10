@@ -24,7 +24,8 @@ class BeerBot(telepot.helper.ChatHandler):
                             [InlineKeyboardButton(text=emoji.emojize(':thermometer: Get measures'), callback_data='get_measures'),
                             InlineKeyboardButton(text=emoji.emojize(':direct_hit: Get current thresholds'), callback_data='get_thresh')],
                             [InlineKeyboardButton(text=emoji.emojize(':level_slider: Set new thresholds'), callback_data='set_thresh'),
-                            InlineKeyboardButton(text=emoji.emojize(':BACK_arrow: Back'), callback_data='back_to_dev')]
+                            InlineKeyboardButton(text=emoji.emojize(':stopwatch: Set new timings'), callback_data='set_times')],
+                            [InlineKeyboardButton(text=emoji.emojize(':BACK_arrow: Back'), callback_data='back_to_dev')]
                         ]
                     )
 
@@ -75,7 +76,7 @@ class BeerBot(telepot.helper.ChatHandler):
             password = msg['text']
             if password == self.password:
                 broker = requests.get(CATALOG_URL + self.username + '/broker').json()
-                self.alert_handler = MyMQTT('Alert_'+self.username, broker['addr'], broker['port'], self)
+                self.alert_handler = MyMQTT('Alert_Bot_'+self.username, broker['addr'], broker['port'], self)
 
                 self.sender.sendMessage(
                     f'Access obtained as *{self.username}*!\nNow choose the process you want to control:',
@@ -90,23 +91,25 @@ class BeerBot(telepot.helper.ChatHandler):
                 self.sender.sendMessage("Wrong password. Try again!")
 
         elif self.set_thresh:
-            if self.is_number(msg['text']):
+            if msg['text'].isdecimal() or msg['text'].lower() == "null":
                 self.set_thresh = False
-
-                url = CATALOG_URL+self.username+'/services/'+self.selected_process+'/'+self.selected_deviceID+'/update_tsh'
-                body = json.dumps({self.selected_resource: round(float(msg['text']), 2)})
+                new_tsh = int(msg['text']) if msg['text'].isdecimal() else None
+                url = CATALOG_URL + self.username + '/services/' + self.selected_process+'/' + self.selected_deviceID
+                url += '/update_tsh' if self.ths_or_times_flag == "thresholds" else '/update_timings'
+                self.ths_or_times_list[self.tsh_index] = new_tsh
+                body = json.dumps({self.selected_resource: self.ths_or_times_list})
                 requests.put(url, body)
 
                 sent = self.sender.sendMessage(
-                    emoji.emojize(f":ballot_box_with_check: {self.selected_resource} threshold updated!\n\nChoose another option:"),
+                    emoji.emojize(f":ballot_box_with_check: {self.selected_resource} {self.ths_or_times_flag} updated!\n\nChoose another option:"),
                     reply_markup=self.keyboard_2
                 )
                 telepot.helper.Editor(self.bot, sent)
 
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                print(f"[{now}][{self.username}] {self.selected_resource} threshold updated")
+                print(f"[{now}][{self.username}][{self.selected_deviceID}] {self.selected_resource} {self.ths_or_times_flag} updated")
             else:
-                self.sender.sendMessage("Input should be numeric! Try again!")
+                self.sender.sendMessage("Input should be numeric or equal to 'null'! Try again!")
 
         elif msg['text'] == '/alertstart':
             self.alert_handler.start()
@@ -130,14 +133,6 @@ class BeerBot(telepot.helper.ChatHandler):
         else:
             self.sender.sendMessage("I don't understand you...")
 
-    def is_number(self, s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            pass
-        return False
-
     def on_callback_query(self, msg):
         """Function to handle the callback queries generated from inline keyboard.
 	
@@ -153,67 +148,72 @@ class BeerBot(telepot.helper.ChatHandler):
             return
 
         if query_data == 'storage':
-            self.bot.answerCallbackQuery(query_id, text='Retrieving connected devices...')
             self.connected_devices('storage_control')
+            self.bot.answerCallbackQuery(query_id, text='Connected devices')
         elif query_data == 'mash':
-            self.bot.answerCallbackQuery(query_id, text='Retrieving connected devices...')
             self.connected_devices('mash_control')
+            self.bot.answerCallbackQuery(query_id, text='Connected devices')
         elif query_data == 'fermentation':
-            self.bot.answerCallbackQuery(query_id, text='Retrieving connected devices...')
             self.connected_devices('fermentation_control')
+            self.bot.answerCallbackQuery(query_id, text='Connected devices')
 
         elif query_data == 'get_measures':
-            self.bot.answerCallbackQuery(query_id, text='Getting measurements...')
             self.get_measures()
+            self.bot.answerCallbackQuery(query_id, text='Measurements received')
         elif query_data == 'get_thresh':
-            self.bot.answerCallbackQuery(query_id, text='Getting current thresholds...')
             self.get_thresh()
+            self.bot.answerCallbackQuery(query_id, text='Current thresholds received')
         elif query_data == 'set_thresh':
+            self.set_thresh_or_times_menu("thresholds")
             self.bot.answerCallbackQuery(query_id, text='Resources menu')
-            self.set_thresh_menu()
+        elif query_data == 'set_times':
+            self.set_thresh_or_times_menu("timings")
+            self.bot.answerCallbackQuery(query_id, text='Resources menu')
 
         elif query_data == 'back_to_main':
-            self.bot.answerCallbackQuery(query_id, text='Back to main menu')
             self.sender.sendMessage(
                     f'Choose the process you want to control:',
                     parse_mode='Markdown',
                     reply_markup=self.keyboard_1
                 )
+            self.bot.answerCallbackQuery(query_id, text='Back to main menu')
         elif query_data == 'back_to_dev':
-            self.bot.answerCallbackQuery(query_id, text='Back to connected devices menu')
             self.connected_devices(self.selected_process)
+            self.bot.answerCallbackQuery(query_id, text='Back to connected devices menu')
 
         elif query_data in self.resources:
-            self.selected_resource = query_data
-            self.bot.answerCallbackQuery(query_id, text=f'Set new threshold for {self.selected_resource}')
+            self.ths_or_times_setting(query_data)
+            self.bot.answerCallbackQuery(query_id, text=f'Set new {self.ths_or_times_flag} for {self.selected_resource}')
+        elif query_data.isdigit():
+            self.tsh_index = int(query_data)
             self.sender.sendMessage(
-                    f"*{self.selected_deviceID}* - Insert the new threshold for {self.selected_resource}:",
-                    parse_mode='Markdown',
-                )
+                        f"*{self.selected_deviceID}* - Insert the new {self.ths_or_times_flag[:-1]} for Step {self.tsh_index + 1} of {self.selected_resource}:",
+                        parse_mode='Markdown'
+                    )
             self.set_thresh = True
+            self.bot.answerCallbackQuery(query_id, text=f'Set new {self.ths_or_times_flag[:-1]} for Step {self.tsh_index + 1}')
 
         else:
             self.selected_deviceID = query_data
-            self.bot.answerCallbackQuery(query_id, text=f'Selected device: {self.selected_deviceID}')
             self.sender.sendMessage(
                     f"*{self.selected_deviceID}* - Choose an option:",
                     parse_mode='Markdown',
                     reply_markup=self.keyboard_2
                 )
+            self.bot.answerCallbackQuery(query_id, text=f'Selected device: {self.selected_deviceID}')
     
     def connected_devices(self, process):
         self.selected_process = process
         conn_dev = requests.get(CATALOG_URL + self.username + '/devices').json()['device']
         self.process_conn_dev = [dev for dev in conn_dev if dev['location'] == process]
         if self.process_conn_dev:
+            keyboard = list(map(lambda d: [InlineKeyboardButton(text=d['deviceID'], callback_data=d['deviceID'])], self.process_conn_dev))
+            keyboard.append([InlineKeyboardButton(text=emoji.emojize(':BACK_arrow: Back'), callback_data='back_to_main')])
             self.sender.sendMessage(
                         f'*{process.split("_")[0].upper()}* - Connected devices:',
                         parse_mode='Markdown',
                         reply_markup=InlineKeyboardMarkup(
-                            inline_keyboard= [
-                                list(map(lambda d: InlineKeyboardButton(text=d['deviceID'], callback_data=d['deviceID']), self.process_conn_dev)),
-                                [InlineKeyboardButton(text=emoji.emojize(':BACK_arrow: Back'), callback_data='back_to_main')]
-                            ]
+                            inline_keyboard= keyboard
                         )
                     )
         else:
@@ -225,7 +225,7 @@ class BeerBot(telepot.helper.ChatHandler):
 
     def get_measures(self):
         now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        print(f'[{now}][{self.username}] Getting measures for device {self.selected_deviceID}')
+        print(f'[{now}][{self.username}][{self.selected_deviceID}] Getting measures')
 
         self.selected_device = next((dev for dev in self.process_conn_dev if dev['deviceID'] == self.selected_deviceID))
         end_point = self.selected_device['end_point'] 
@@ -236,12 +236,8 @@ class BeerBot(telepot.helper.ChatHandler):
         message = ''
         for resource in resources:
             measure = requests.get(end_point + '/get_measure/' + resource).json()[resource]
-            try:
-                icon = icons[resource]
-                unit = meas_units[resource]
-            except:
-                icon = ''
-                unit = ''
+            icon = icons.get(resource, '')
+            unit = meas_units.get(resource, '')
             message += f'{icon} *{resource}*: {measure}{unit}\n'
             
         self.sender.sendMessage(
@@ -252,35 +248,43 @@ class BeerBot(telepot.helper.ChatHandler):
 
     def get_thresh(self):
         now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        print(f'[{now}][{self.username}] Getting current thresholds for device {self.selected_deviceID}')
+        print(f'[{now}][{self.username}][{self.selected_deviceID}] Getting current thresholds')
 
         services = requests.get(CATALOG_URL + self.username + '/services/' + self.selected_process).json()[self.selected_process]
-        thresholds = next((dev for dev in services if dev['deviceID'] == self.selected_deviceID))['thresholds']
+        device = next((dev for dev in services if dev['deviceID'] == self.selected_deviceID))
+        thresholds = device['thresholds']
+        timings = device['timings']
 
         # Potrebbero essere messe nel dev_conn_settings
         icons = {'Temperature':':thermometer:', 'Humidity':':droplet:'}
         meas_units = {'Temperature':'°C', 'Humidity':'%'}
         message = ''
-        for resource, thresh in thresholds.items():
-            try:
-                icon = icons[resource]
-                unit = meas_units[resource]
-            except:
-                icon = ''
-                unit = ''
-            message += f'{icon} *{resource}*: {thresh}{unit}\n'
-            
+        for resource in thresholds:
+            icon = icons.get(resource, '')
+            unit = meas_units.get(resource, '')
+
+            if len(thresholds[resource]) > 1:
+                message += f'{icon} *{resource}*:\n'
+                for k in range(len(thresholds[resource])):
+                    message += f'-Step {k+1}: {thresholds[resource][k]}{unit} for {timings[resource][k]} min\n'
+            else:
+                if timings[resource][0]:
+                    message += f'{icon} *{resource}*: {thresholds[resource][0]}{unit} for {timings[resource][0]} min\n'
+                else:
+                    message += f'{icon} *{resource}*: {thresholds[resource][0]}{unit}\n'
+
         self.sender.sendMessage(
                 emoji.emojize(f'*{self.selected_deviceID}* - Current thresholds:\n\n' + message),
                 parse_mode='Markdown',
                 reply_markup=self.keyboard_2
             )
 
-    def set_thresh_menu(self):
+    def set_thresh_or_times_menu(self, ths_or_times):
+        self.ths_or_times_flag = ths_or_times
         self.selected_device = next((dev for dev in self.process_conn_dev if dev['deviceID'] == self.selected_deviceID))
         self.resources = self.selected_device['resources'] 
         self.sender.sendMessage(
-                        f'*{self.selected_deviceID}* - Select the resource you want to change the threshold of:',
+                        f'*{self.selected_deviceID}* - Select the resource you want to change the {ths_or_times} of:',
                         parse_mode='Markdown',
                         reply_markup=InlineKeyboardMarkup(
                             inline_keyboard= [
@@ -288,6 +292,30 @@ class BeerBot(telepot.helper.ChatHandler):
                             ]
                         )
                     )
+                
+    def ths_or_times_setting(self, query_data):
+        self.selected_resource = query_data
+        services = requests.get(CATALOG_URL + self.username + '/services/' + self.selected_process).json()[self.selected_process]
+        device = next((dev for dev in services if dev['deviceID'] == self.selected_deviceID))
+        self.ths_or_times_list = device[self.ths_or_times_flag][self.selected_resource]
+        if len(self.ths_or_times_list) == 1:
+            self.tsh_index = 0
+            self.sender.sendMessage(
+                    f"*{self.selected_deviceID}* - Insert the new {self.ths_or_times_flag[:-1]} for {self.selected_resource}:",
+                    parse_mode='Markdown'
+                )
+            self.set_thresh = True
+        else:
+            self.sender.sendMessage(
+                    f"*{self.selected_deviceID}* - Select the step of {self.selected_resource} you want to modify (current {self.ths_or_times_flag} in brackets):",
+                    parse_mode='Markdown',
+                    reply_markup=InlineKeyboardMarkup(
+                        inline_keyboard= 
+                            list(map(lambda t: 
+                                [InlineKeyboardButton(text=f'Step {t[0]+1} ({t[1]})', 
+                                callback_data=str(t[0]))], enumerate(self.ths_or_times_list)))
+                    )
+                )
 
     def notify(self, topic, msg):
         msg_dict = json.loads(msg)
@@ -296,9 +324,10 @@ class BeerBot(telepot.helper.ChatHandler):
             msg_dict = msg_dict['ALERT']
             if msg_dict['alert_status']:
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                print(f"[{now}][{self.username}] {msg_dict['resource']} ALERT received for device {deviceID}")
+                print(f"[{now}][{self.username}][{deviceID}] {msg_dict['resource']} ALERT received!")
+                status = "OVER" if msg_dict['alert_type'] == "UP" else "UNDER"
                 self.sender.sendMessage( 
-                                emoji.emojize(f":warning: *WARNING - {deviceID}* :warning:\n{msg_dict['resource']} over the threshold!"),
+                                emoji.emojize(f":warning: *WARNING - {deviceID}* :warning:\n{msg_dict['resource']} *{status}* the threshold!"),
                                 parse_mode='Markdown'
                                 )
 
