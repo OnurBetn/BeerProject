@@ -1,0 +1,340 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "beer bot",
+            "modelConfiguration": {
+                "fallbackIntentSensitivity": {
+                    "level": "LOW"
+                }
+            },
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "GetConnectedDevices",
+                    "slots": [
+                        {
+                            "name": "Process",
+                            "type": "PROCESS"
+                        }
+                    ],
+                    "samples": [
+                        "which devices are connected in {Process}",
+                        "refresh connected devices for {Process}",
+                        "connected devices for {Process}",
+                        "retrieve connected devices for {Process}",
+                        "get connected devices for {Process}"
+                    ]
+                },
+                {
+                    "name": "GetMeasures",
+                    "slots": [
+                        {
+                            "name": "Device",
+                            "type": "DEVICE"
+                        },
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE"
+                        }
+                    ],
+                    "samples": [
+                        "what's the {Resource} of {Device}",
+                        "what is the {Resource} measured by {Device}",
+                        "get current {Resource} in {Device}",
+                        "get {Resource} in {Device}",
+                        "retrieve {Resource} in {Device}",
+                        "current {Resource} in {Device}",
+                        "get current {Resource} for {Device}"
+                    ]
+                },
+                {
+                    "name": "GetThresholds",
+                    "slots": [
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE"
+                        },
+                        {
+                            "name": "Device",
+                            "type": "DEVICE"
+                        }
+                    ],
+                    "samples": [
+                        "what are the {Resource} thresholds of {Device}",
+                        "retrieve {Resource}  thresholds of {Device}",
+                        "{Resource}  thresholds of {Device}",
+                        "get current {Resource} thresholds of {Device}",
+                        "get {Resource} thresholds of {Device}",
+                        "get current {Resource} thresholds and timings of {Device}"
+                    ]
+                },
+                {
+                    "name": "TimeToThreshold",
+                    "slots": [
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE"
+                        },
+                        {
+                            "name": "Device",
+                            "type": "DEVICE"
+                        }
+                    ],
+                    "samples": [
+                        "how long until {Resource} threshold is reached in {Device}",
+                        "how long it is until {Resource} threshold is reached in {Device}",
+                        "how much time before {Resource} threshold is reached in {Device} ",
+                        "time to reach {Resource} threshold in {Device}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "PROCESS",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "storage",
+                                "synonyms": [
+                                    "storage control"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "mash",
+                                "synonyms": [
+                                    "mashing",
+                                    "mash control"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "fermentation",
+                                "synonyms": [
+                                    "fermentation process",
+                                    "fermentation control"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "DEVICE",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "No device"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "RESOURCE",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "Luminous intensity"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Humidity",
+                                "synonyms": [
+                                    "relative humidity"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Temperature",
+                                "synonyms": [
+                                    "degrees celsius"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "GetConnectedDevices",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Process",
+                            "type": "PROCESS",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        }
+                    ]
+                },
+                {
+                    "name": "GetMeasures",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Device",
+                            "type": "DEVICE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.592109679340.303664260831"
+                            }
+                        },
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.592109679340.1497057155329"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GetThresholds",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.731028788036.1058159290125"
+                            }
+                        },
+                        {
+                            "name": "Device",
+                            "type": "DEVICE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.731028788036.890896564851"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "TimeToThreshold",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "Resource",
+                            "type": "RESOURCE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.55996820968.865383152315"
+                            }
+                        },
+                        {
+                            "name": "Device",
+                            "type": "DEVICE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.55996820968.1277792703008"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.782415787919.239638782313",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which process?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.592109679340.1497057155329",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which resource?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.592109679340.303664260831",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which device?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.731028788036.1058159290125",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which resource?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.731028788036.890896564851",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which device?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.55996820968.865383152315",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which resource?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.55996820968.1277792703008",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which device?"
+                    }
+                ]
+            }
+        ]
+    }
+}
