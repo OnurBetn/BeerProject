@@ -10,7 +10,7 @@ import cherrypy
 class FirstClient(object):
     def __init__(self,client_id,broker,port,resource):
         self.client = MyMQTT(client_id+'/'+resource,broker,port,self)
-        self.stop_flag = 1
+        self.stop_flag = 0
         self.resource = resource
         self.led_status = 0
         self.led_notification = False
@@ -251,7 +251,7 @@ class ResourceSenderThread(threading.Thread):
 
 
 if __name__ == '__main__':
-    catalog_addr = 'http://192.168.43.169:8080/BREWcatalog'
+    catalog_addr = 'http://localhost:8080/BREWcatalog'
     file_settings = open('device_connector_settings.json', 'r')
     settings_text = file_settings.read()
     file_settings.close()

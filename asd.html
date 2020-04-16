@@ -1,0 +1,104 @@
+<script>
+(function(scope) {
+    scope.startH = 0;
+    scope.startM = 0;
+    scope.duration = 45;
+    scope.valve1 = 1;
+    scope.valve2 = 0;
+    scope.intervals = [];
+
+    scope.$watch('msg', function(msg){
+        if (msg) {
+            if (msg.payload) {
+                scope.intervals = msg.payload;
+                // Force repaint to adjust to table height
+                $("#tblIntervals").parent().css("height","");
+            }
+        }
+    } );
+    
+    scope.valveList = function(valves) {
+        for (var arValves=[], i=0; 1<<i <= valves; i++) { if (valves & 1<<i) arValves.push(i+1); }
+        return arValves.join("+");
+    }
+
+    scope.add = function() {
+        scope.intervals.push({
+            startH : scope.startH,
+            startM : scope.startM,
+            duration : scope.duration,
+            valve : scope.valve1 + scope.valve2
+        });
+        $("#tblIntervals").parent().css("height","");
+        scope.intervals.sort(function(a,b){return a.startH*60+a.startM-b.startH*60-b.startM})
+        scope.send({payload:scope.intervals});
+    };
+
+    scope.remove = function(row) {
+        var removed = scope.intervals.splice(scope.intervals.indexOf(row),1);
+        $("#tblIntervals").parent().css("height","");
+        scope.startH = removed[0].startH;
+        scope.startM = removed[0].startM;
+        scope.duration = removed[0].duration;
+        scope.valve1 = (removed[0].valve & 1);
+        scope.valve2 = (removed[0].valve & 2);
+        scope.send({payload:scope.intervals});
+    }
+})(scope)
+</script>
+
+<style>
+table.intervals {
+    border-collapse: collapse;
+    width: 100%;
+}
+table.intervals td, table.intervals th {
+    border: 1px solid #555;
+    padding: 1px;
+}
+table.intervals tr:nth-child(odd) { background-color: #555; }
+table.intervals tr:hover {background-color: #888;}
+</style>
+
+<div style="">
+    <p class="nr-dashboard-cardtitle">Add new interval</p>
+    <table>
+        <tr>
+            <td>Start:</td>
+            <td>
+                <input type=number min=0 max=23 style="width:35px" ng-model="startH">:<input type=number min=0 max=59 style="width:35px" ng-model="startM">
+            </td>
+        </tr>
+        <tr>
+            <td>Duration:</td>
+            <td><input type=number min=1 style="width:50px;" ng-model="duration"> s</td>
+        </tr>
+        <tr>
+            <td>Valve</td>
+            <td>
+                <input id="chkValve1" type="checkbox" ng-model="valve1" ng-true-value=1 ng-false-value=0><label for="chkValve1">1</label>
+                <input id="chkValve2" type="checkbox" ng-model="valve2" ng-true-value=2 ng-false-value=0><label for="chkValve2">2</label>
+            </td>
+        </tr>
+        <tr>
+            <td colspan=2><md-button ng-click="add()">Add</md-button></td>
+        </tr>
+    </table>
+</div>
+
+<div id="tblIntervals">
+    <p class="nr-dashboard-cardtitle">Time Intervals</p>
+    <table class="intervals">
+        <tr>
+            <td>Start</td>
+            <td>Durat.</td>
+            <td colspan=2>Valve</td>
+        </tr>
+        <tr ng-repeat="i in intervals">
+            <td>{{i.startH}}:{{("0"+i.startM).slice(-2)}}</td>
+            <td align="right" style="padding-left:0px; padding-right:10px;">{{i.duration}} s</td>
+            <td align="center">{{valveList(i.valve)}}</td>
+            <td style="cursor:pointer;" ng-click="remove(i)" title="Remove">&times;</td>
+        </tr>
+    </table>
+</div>

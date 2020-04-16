@@ -1,0 +1,40 @@
+<div>
+<div id="container">
+    <div align="center" ng-repeat="item in msg.payload" class="tsh">
+       <input type="number"
+            style="width:60px"
+            min="0" max="100" 
+            value={{item}}
+            ng-model="values[$index]"
+            id={{$index}}
+            ng-change="send({payload: set()})"
+            >
+    </div>
+    {{values}}
+</div>
+</div>
+    
+<script>
+(function(scope) {
+    scope.values = [];
+    
+    scope.$watch('msg', function(msg) {
+    if (msg) {
+        $("#container").parent().css("height","");
+        for (i = 0; i < msg.payload.length; i++) { 
+            document.getElementById(i).value = msg.payload[i];
+            scope.values[i] = msg.payload[i];
+        }
+    }
+    });
+    
+    scope.set = function(){
+        return scope.values;
+    }
+    
+})(scope);
+</script>
+    
+<style>
+
+</style>

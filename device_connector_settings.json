@@ -1,7 +1,7 @@
 {
   "user_owner": "marioR92",
   "deviceID": "dht11-c",
-  "end_point": "http://192.168.43.209:8081/rest",
+  "end_point": "http://localhost:8081/rest",
   "location": "mash_control",
   "resources": [
     "Temperature"

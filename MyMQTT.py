@@ -26,9 +26,9 @@ class MyMQTT:
         self.notifier.notify(msg.topic,msg.payload)
 
 
-    def myPublish(self, topic, msg):
+    def myPublish(self, topic, msg, retain=False):
         print("publishing '%s' with topic '%s'" %(msg,topic))
-        self._paho_mqtt.publish(topic,msg,2)
+        self._paho_mqtt.publish(topic,msg,2,retain)
 
     def mySubscribe(self, topic):
         print("subscribing to %s" %(topic))

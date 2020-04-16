@@ -22,9 +22,9 @@ class BeerBot(telepot.helper.ChatHandler):
     keyboard_2 = InlineKeyboardMarkup(
                         inline_keyboard=[
                             [InlineKeyboardButton(text=emoji.emojize(':thermometer: Get measures'), callback_data='get_measures'),
-                            InlineKeyboardButton(text=emoji.emojize(':direct_hit: Get current thresholds'), callback_data='get_thresh')],
+                             InlineKeyboardButton(text=emoji.emojize(':direct_hit: Get current thresholds'), callback_data='get_thresh')],
                             [InlineKeyboardButton(text=emoji.emojize(':level_slider: Set new thresholds'), callback_data='set_thresh'),
-                            InlineKeyboardButton(text=emoji.emojize(':stopwatch: Set new timings'), callback_data='set_times')],
+                             InlineKeyboardButton(text=emoji.emojize(':stopwatch: Set new timings'), callback_data='set_times')],
                             [InlineKeyboardButton(text=emoji.emojize(':BACK_arrow: Back'), callback_data='back_to_dev')]
                         ]
                     )
@@ -37,13 +37,6 @@ class BeerBot(telepot.helper.ChatHandler):
         self.step = 1
 
     def on_chat_message(self, msg):
-        """Function to handle messages received from users.
-	
-		Parameters
-		----------
-        msg : dict 
-            message received
-		"""
         content_type, chat_type, chat_id = telepot.glance(msg)
 
         if content_type != 'text':
@@ -134,13 +127,6 @@ class BeerBot(telepot.helper.ChatHandler):
             self.sender.sendMessage("I don't understand you...")
 
     def on_callback_query(self, msg):
-        """Function to handle the callback queries generated from inline keyboard.
-	
-		Parameters
-		----------
-        msg : dict 
-            message received
-		"""
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
 
         if self.alert_started:

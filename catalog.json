@@ -1,10 +1,41 @@
 {
     "marioR92": {
         "broker": {
-            "addr": "192.168.43.209",
+            "addr": "test.mosquitto.org",
             "port": 1883
         },
-        "connected_devices": [],
+        "connected_devices": [
+            {
+                "user_owner": "marioR92",
+                "deviceID": "dht11-c",
+                "end_point": "http://localhost:8081/rest",
+                "location": "mash_control",
+                "resources": [
+                    "Temperature"
+                ],
+                "units": {
+                    "Temperature": "Cel"
+                },
+                "topics": {
+                    "event_notify": "marioR92/mash_control/dht11-c",
+                    "manager": "marioR92/dht11-c/dev_manager",
+                    "analytics": "marioR92/dht11-c/analysis"
+                },
+                "time_steps": {
+                    "Temperature": 5
+                },
+                "device_pins": {
+                    "Temperature": {
+                        "sense": 4,
+                        "output": {
+                            "UP": 17,
+                            "DOWN": 27
+                        }
+                    }
+                },
+                "insert-timestamp": 1586887369.416211
+            }
+        ],
         "user_information": {
             "userID": "marioR92",
             "email_address": "mariorossi92@gmail.com",
@@ -20,10 +51,10 @@
                     ],
                     "thresholds": {
                         "Temperature": [
-                            5
+                            21
                         ],
                         "Humidity": [
-                            70
+                            76
                         ]
                     },
                     "incert_ranges": {
@@ -50,10 +81,10 @@
                     ],
                     "thresholds": {
                         "Temperature": [
-                            55,
-                            62,
-                            65,
-                            75,
+                            24,
+                            35,
+                            56,
+                            79,
                             100
                         ]
                     },
@@ -64,13 +95,13 @@
                         "Temperature": [
                             90,
                             90,
-                            90,
-                            45,
+                            85,
+                            58,
                             0
                         ]
                     },
                     "trend_flag": 1,
-                    "status": 0
+                    "status": 1
                 }
             ],
             "storage_control": [

@@ -7,16 +7,17 @@
     "Temperature",
     "Humidity"
   ],
-  "units": [
-    "Cel",
-    "%"
-  ],
+  "units": {
+    "Temperature": "Cel",
+    "Humidity": "%"
+  },
   "topics": {
     "event_notify": "marioR92/fermentation_control/dht11-b",
-    "manager": "marioR92/dht11-b/dev_manager"
+    "manager": "marioR92/dht11-b/dev_manager",
+    "analytics": "marioR92/dht11-b/analysis"
   },
-  "time_steps": [
-    5,
-    20
-  ]
+  "time_steps": {
+    "Temperature": 5,
+    "Humidity": 20
+  }
 }

@@ -35,7 +35,7 @@ class ServiceMQTT(object):
         return
 
     def publish(self,topic,msg):
-        self.service.myPublish(topic,msg)
+        self.service.myPublish(topic,msg,retain=True)
         return
 
     def subscribe(self, topic):

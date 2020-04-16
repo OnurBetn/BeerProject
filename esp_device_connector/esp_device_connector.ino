@@ -7,13 +7,27 @@
 #include <WiFiUdp.h>
 #include <NTPClient.h>
 
+#define ssid "Redmi7"
+#define password "cacca1234"
+#define mqttServer "test.mosquitto.org"
+#define mqttPort 1883
+#define N_RESOURCES 2
 #define DHTPIN 2 // pin D4
 
 const char* catalog_addr = "http://192.168.43.19:8080/BREWcatalog/";
 
+struct Units {
+  char unit[N_RESOURCES][8];
+};
+
 struct Topics {
   char event_notify[64];
   char manager[64];
+  char analytics[64];
+};
+
+struct Time_steps {
+  char t_s[N_RESOURCES];
 };
 
 struct Config {
@@ -22,10 +36,9 @@ struct Config {
   char end_point[64];
   char location[32];
 
-  static const int maxResources = 2;
-  char resources[maxResources][16];
-  char units[maxResources][16];
-  int time_steps[maxResources];
+  char resources[N_RESOURCES][16];
+  Units units;
+  Time_steps time_steps;
   Topics topics;
 
   void load(const JsonDocument&);
@@ -55,15 +68,16 @@ void Config::load(const JsonDocument& obj) {
   strlcpy(end_point, obj["end_point"] | "", sizeof(end_point));
   strlcpy(location, obj["location"] | "", sizeof(location));
 
-  // Extract each resource
-  for (int res = 0; res <= maxResources - 1; res++) {
-    strlcpy(resources[res], obj["resources"][res] | "", sizeof(resources[res]));
-    strlcpy(units[res], obj["units"][res] | "", sizeof(units[res]));
-    time_steps[res] = obj["time_steps"][res].as<int>();
+  // Load each resource
+  for (int i = 0; i <= N_RESOURCES - 1; i++) {
+    strlcpy(resources[i], obj["resources"][i] | "", sizeof(resources[i]));
+    strlcpy(units.unit[i], obj["units"][resources[i]] | "", sizeof(units.unit[i]));
+    time_steps.t_s[i] = obj["time_steps"][resources[i]].as<int>();
   }
 
   strlcpy(topics.event_notify, obj["topics"]["event_notify"] | "", sizeof(topics.event_notify));
   strlcpy(topics.manager, obj["topics"]["manager"] | "", sizeof(topics.manager));
+  strlcpy(topics.analytics, obj["topics"]["analytics"] | "", sizeof(topics.analytics));
 }
 
 void Config::save(JsonDocument& obj) const {
@@ -73,17 +87,18 @@ void Config::save(JsonDocument& obj) const {
   obj["location"] = location;
 
   JsonArray resources_arr = obj.createNestedArray("resources");
-  JsonArray units_arr = obj.createNestedArray("units");
-  JsonArray time_steps_arr = obj.createNestedArray("time_steps");
+  JsonObject units_obj = obj.createNestedObject("units");
+  JsonObject time_steps_obj = obj.createNestedObject("time_steps");
   // Save each resource
-  for (int res = 0; res <= maxResources - 1; res++) {
-    resources_arr.add(resources[res]);
-    units_arr.add(units[res]);
-    time_steps_arr.add(time_steps[res]);
+  for (int i = 0; i <= N_RESOURCES - 1; i++) {
+    resources_arr.add(resources[i]);
+    units_obj[resources[i]] = units.unit[i];
+    time_steps_obj[resources[i]] = time_steps.t_s[i];
   }
 
   obj["topics"]["event_notify"] = topics.event_notify;
   obj["topics"]["manager"] = topics.manager;
+  obj["topics"]["analytics"] = topics.analytics;
 }
 
 bool loadConfig(String ip) {
@@ -130,9 +145,6 @@ bool loadConfig(String ip) {
 }
 
 String WiFiConnect() {
-  char* ssid = "Redmi7";
-  char* password = "cacca1234";
-
   WiFi.begin(ssid, password);
   Serial.println("");
   Serial.print("Connecting to WiFi");
@@ -144,51 +156,30 @@ String WiFiConnect() {
   return WiFi.localIP().toString();
 }
 
-void MQTTconnect() {
-  char url[100];
-  strcpy(url, catalog_addr);
-  strcat(url, config.user_owner);
-  strcat(url, "/broker");
-  
-  if (http.begin(url)){
-    int httpCode  = http.GET();
-    if (httpCode  > 0) {
-      Serial.print("Retrieving MQTT broker, GET request code: ");
-      Serial.println(httpCode);
-      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-        String payload = http.getString();
-        StaticJsonDocument<80> doc;
-        auto error = deserializeJson(doc, payload);
-        if (error) {
-          Serial.println("Failed to parse broker info");
-          return;
-        }
-        const char* mqttServer = doc["addr"];
-        const int mqttPort = doc["port"];
-        client.setServer(mqttServer, mqttPort);
-        client.setCallback(callback);
-        Serial.printf("Broker address: %s, Port: %d\n", mqttServer, mqttPort);
-        Serial.print("Connecting to MQTT...");
-        while (!client.connected()) {
-          Serial.print(".");
-          String clientId = "ESP8266Client-";
-          clientId += String(random(0xffff), HEX);
-          if (client.connect(clientId.c_str())) {
-            Serial.println("Connected!");
-            } else {
-              Serial.print("Failed with state ");
-              Serial.println(client.state());
-              delay(2000);
-            }
-          }
-        // client.subscribe(config.topics.manager);
-        }
-      } else {
-        Serial.printf("[HTTP] GET broker failed, error: %s\n", http.errorToString(httpCode).c_str());
-      }
-    http.end();
-  } else {
-    Serial.print("[HTTP] GET broker failed");
+void MQTTsetup() {
+  client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
+}
+
+void reconnect_mqtt() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // ... and resubscribe
+      // client.subscribe(config.topics.manager);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
   }
 }
 
@@ -289,7 +280,7 @@ void connectionUpdater() {
 }
 
 void sendTemperature() {
-  if (currentMillis - previousTempSent >= config.time_steps[0] * 1000) {
+  if (currentMillis - previousTempSent >= config.time_steps.t_s[0] * 1000) {
     previousTempSent = currentMillis;
 
     // Read temperature as Celsius (the default)
@@ -323,7 +314,7 @@ void sendTemperature() {
 }
 
 void sendHumidity() {
-  if (currentMillis - previousHumSent >= config.time_steps[1] * 1000) {
+  if (currentMillis - previousHumSent >= config.time_steps.t_s[1] * 1000) {
     previousHumSent = currentMillis;
 
     // Reading humidity
@@ -362,8 +353,8 @@ void setup() {
   String ip = WiFiConnect();
   loadConfig(ip);
   timeClient.begin();
-  dht.begin();
-  MQTTconnect();
+  dht.begin(); 
+  MQTTsetup();
   // Starting the REST web server
   server.on("/rest/get_measure/Temperature", HTTP_GET, handle_getTemp);
   server.on("/rest/get_measure/Humidity", HTTP_GET, handle_getHum);
@@ -372,6 +363,9 @@ void setup() {
 }
 
 void loop() {
+  if (!client.connected()) {
+    reconnect_mqtt();
+  }
   while(!timeClient.update()) {
     timeClient.forceUpdate();
   }

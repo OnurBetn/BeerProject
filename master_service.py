@@ -210,7 +210,7 @@ class unitsManagerThread(threading.Thread):
 
 if __name__ == '__main__':
 
-    catalog_addr = 'http://192.168.43.169:8080/BREWcatalog'
+    catalog_addr = 'http://localhost:8080/BREWcatalog'
     user_set_file = open('user_information.json', 'r')
     settings = user_set_file.read()
     user_set_file.close()
