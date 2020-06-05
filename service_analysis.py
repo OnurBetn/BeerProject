@@ -13,7 +13,11 @@ class TshAnalytics(object):
         self.resource = resource
         self.measures_dict = {}
         self.alert_publ = AlertPublisher(self.userID,self.deviceID,self.broker,self.port,self.resource)
-        self.alert_publ.run()
+        try:
+            self.alert_publ.run()
+        except TimeoutError:
+            print("The host does not respond")
+            pass
         return
 
     def threshold(self,event, tsh, incert):

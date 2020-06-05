@@ -1,6 +1,7 @@
 import requests
 from service_analysis import *
 
+
 class ResourceThread(threading.Thread):
     def __init__(self, userID, topics_dict, broker, unit_dict, resource):
         threading.Thread.__init__(self)
@@ -28,8 +29,9 @@ class ResourceThread(threading.Thread):
             self.start_time = 0
             pass
         self.new_event = {}
-        self.analytic_unit = TshAnalytics(self.userID, self.deviceID, self.broker_dict['addr'], self.broker_dict['port'],
-                                       self.resource)
+        self.analytic_unit = TshAnalytics(self.userID, self.deviceID, self.broker_dict['addr'],
+                                          self.broker_dict['port'],
+                                          self.resource)
         if self.trend_flag == 1:
             self.measures_trend = TrendThread(self.clientID, self.deviceID, self.broker_dict, topics_dict['analytics'],
                                               self.resource)
@@ -40,33 +42,33 @@ class ResourceThread(threading.Thread):
     def run(self):
         print('running ' + self.clientID + ' thread')
         self.unit_mqtt.run()
+        self.unit_mqtt.subscribe(self.topics_dict['event_notify'])
+        time.sleep(5)
+        self.unit_mqtt.publish(self.topics_dict['manager'], json.dumps(self.msg_run))
         if self.trend_flag == 1:
             self.measures_trend.start()
             pass
-        self.unit_mqtt.subscribe(self.topics_dict['event_notify'])
-        time.sleep(2)
-        self.unit_mqtt.publish(self.topics_dict['manager'], json.dumps(self.msg_run))
-        self.i = 0
 
+        i = 0
         while self.kill_flag == 0:
             if self.sleep_flag == 0:
                 if self.unit_mqtt.flag_notify == 1:
                     self.new_event = self.unit_mqtt.event
                     self.unit_mqtt.flag_notify = 0
                     if self.trend_flag == 1:
-                        self.measures_trend.update(self.new_event, self.start_time, self.tsh_list[self.i])
+                        self.measures_trend.update(self.new_event, self.start_time, self.tsh_list[i])
                         pass
-                    self.analytic_unit.threshold(self.new_event, self.tsh_list[self.i], self.incert_range)
+                    self.analytic_unit.threshold(self.new_event, self.tsh_list[i], self.incert_range)
                     if self.start_time == 0:
-                        if self.new_event['v'] >= self.tsh_list[self.i]:
+                        if self.new_event['v'] >= self.tsh_list[i]:
                             self.start_time = time.time()
                             pass
                         pass
                     if self.start_time != 0:
                         if self.start_time is not None:
-                            if self.new_event['t'] > self.start_time + self.timings_list[self.i]:
-                                self.i += 1
-                                if self.i == len(self.tsh_list):
+                            if self.new_event['t'] > self.start_time + self.timings_list[i]:
+                                i += 1
+                                if i == len(self.tsh_list):
                                     self.kill_flag = 1
                                     self.unit_mqtt.publish(self.topics_dict['manager'], json.dumps(self.msg_disc))
                                     time.sleep(2)
@@ -104,7 +106,7 @@ class ResourceThread(threading.Thread):
             pass
         return
 
-    def sleepmode(self,status):
+    def sleepmode(self, status):
         self.sleep_flag = status
         return
 
@@ -166,9 +168,17 @@ class unitsManagerThread(threading.Thread):
 
                 time.sleep(5)
             pass
+
+        for self.dev in self.units_threads:
+            for self.res in self.units_threads[self.dev]:
+                self.units_threads[self.dev][self.res].exit()
+                pass
+            self.units_threads.pop(self.dev)
+            pass
+
         return
 
-    def createUpdateThreads(self,unit_dict):
+    def createUpdateThreads(self, unit_dict):
         self.flag = 0
         self.unit_dict = unit_dict
         if self.device['deviceID'] not in self.units_threads:
@@ -177,7 +187,8 @@ class unitsManagerThread(threading.Thread):
 
         for self.resource in self.unit_dict['active_resources']:
             if self.resource not in self.units_threads[self.device['deviceID']]:
-                self.thread = ResourceThread(self.userID, self.device['topics'], self.broker_dict, self.unit_dict,self.resource)
+                self.thread = ResourceThread(self.userID, self.device['topics'], self.broker_dict, self.unit_dict,
+                                             self.resource)
                 self.thread.start()
                 self.units_threads[self.device['deviceID']][self.resource] = self.thread
                 pass
@@ -218,15 +229,30 @@ if __name__ == '__main__':
     services_threads = {}
     user_ID = login_dict['userID']
     broker_dict = requests.get(catalog_addr + '/' + user_ID + '/broker').json()
-    monitoring_types_dict = requests.get(catalog_addr + '/' + user_ID + '/services/list').json()
-    monitoring_types_list = monitoring_types_dict['services_list']
 
-    if not monitoring_types_list:
-        print('No service available')
-        pass
-    else:
-        for service_type in monitoring_types_list:
-            thread = unitsManagerThread(user_ID, broker_dict, service_type, catalog_addr)
-            thread.start()
-            services_threads[service_type] = thread
+    while True:
+        monitoring_types_dict = requests.get(catalog_addr + '/' + user_ID + '/services/list').json()
+        monitoring_types_list = monitoring_types_dict['services_list']
+
+        if not monitoring_types_list:
+            print('No service available')
+            break
+        else:
+            for service_type in monitoring_types_list:
+                if service_type not in services_threads:
+                    thread = unitsManagerThread(user_ID, broker_dict, service_type, catalog_addr)
+                    thread.start()
+                    services_threads[service_type] = thread
+                    pass
+                else:
+                    if services_threads[service_type].is_alive() != 1:
+                        thread = unitsManagerThread(user_ID, broker_dict, service_type, catalog_addr)
+                        thread.start()
+                        services_threads[service_type] = thread
+                        pass
+                    pass
+                pass
             pass
+        time.sleep(60)
+
+        pass

@@ -112,6 +112,13 @@ class CatalogManager(object):
                                         flag = 1
                                         pass
                                     pass
+                                elif uri[2] == 'broker':
+                                    data = cherrypy.request.body.read()
+                                    data_dict = json.loads(data)
+                                    user_dict['broker'] = data_dict
+                                    catalog_dict[uri[1]] = user_dict
+                                    flag = 1
+                                    pass
                                 elif uri[2] == 'services':
                                     services_dict = user_dict['services']
                                     if len(uri) > 3:

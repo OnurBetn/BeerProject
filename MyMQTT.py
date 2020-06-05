@@ -1,4 +1,6 @@
 import paho.mqtt.client as PahoMQTT
+import json
+
 
 class MyMQTT:
 
@@ -13,7 +15,7 @@ class MyMQTT:
         self._topic= []
         self._isSubscriber = False
 
-        self._paho_mqtt = PahoMQTT.Client(client_id, False)
+        self._paho_mqtt = PahoMQTT.Client(client_id, True)
 
         self._paho_mqtt.on_connect = self.myOnConnect
         self._paho_mqtt.on_message = self.myOnMessageReceived
@@ -49,3 +51,48 @@ class MyMQTT:
 
         self._paho_mqtt.loop_stop()
         self._paho_mqtt.disconnect()
+
+    @property
+    def paho_mqtt(self):
+        return self._paho_mqtt
+
+
+class MyMQTTconnectionTest:
+
+    def __init__ (self,client_id,broker,port,notifier):
+        self.broker = broker
+        self.port = port
+        self.notifier = notifier
+
+        self.clientID = client_id
+        self.flag=0
+
+        self._topic= []
+        self._isSubscriber = False
+
+        self._paho_mqtt = PahoMQTT.Client(client_id, True)
+
+        self._paho_mqtt.on_connect = self.myOnConnect
+
+    def myOnConnect (self, paho_mqtt, userdata, flags, rc):
+        print('\nConnected to %s with result code: %d' %(self.broker, rc))
+        self.msg={'rc': rc}
+        self.notifier.notify(None,json.dumps(self.msg))
+
+    def start(self):
+        self._paho_mqtt.connect(self.broker, self.port)
+        self._paho_mqtt.loop_start()
+
+    def stop(self):
+        if self._isSubscriber == True:
+            for self.topic in self._topic:
+                self._paho_mqtt.unsubscribe(self.topic)
+                pass
+            pass
+
+        self._paho_mqtt.loop_stop()
+        self._paho_mqtt.disconnect()
+
+    @property
+    def paho_mqtt(self):
+        return self._paho_mqtt
