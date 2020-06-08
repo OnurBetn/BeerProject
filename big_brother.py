@@ -57,17 +57,6 @@ class BeerManager:
             '3': 'FluidTemp'
         }
 
-        self.set_edit_service_actions = {
-            'this': self.edit_service,
-            '1': self.edit_service_id,
-            '2': self.edit_service_resources,
-            '3': self.edit_service_ths_steps,
-            '4': self.edit_service_uncert_ranges,
-            '5': self.edit_service_trend_flag,
-            '9': self.access_obtained_menu,
-            '0': self.exit,
-        }
-
         self.username = None
         self.user_dict = None
         self.device_dict = None
@@ -624,8 +613,7 @@ class BeerManager:
             print('\t [2] Edit number of thresholds steps')
             print('\t [3] Edit uncertainty ranges')
             print('\t [4] Edit trend flag')
-            print("\n\t [9] Back")
-            print("\t [0] Quit")
+            print("\n\t [9] No edit")
 
             choice = input(" >>  ")
 
@@ -652,7 +640,7 @@ class BeerManager:
                 print(" Service edited!")
             else:
                 response.raise_for_status()
-                
+
         print("\n\t [9] Back")
         print("\t [0] Quit")
         choice = input(" >>  ")
