@@ -56,13 +56,13 @@ def refresh_devices_slot(devices):
 
 def evaluate_synonyms(deviceID):
     synonyms = ["", "", ""]   
-    for ind, char in enumerate(deviceID):
+    for char in deviceID:
         if char.isalpha():
             synonyms[0] += char
             synonyms[1] += char + '. '
             synonyms[2] += char + ' '
-        elif char.isdecimal() and deviceID[ind-1].isdecimal():
-            num_to_word = num2words(deviceID[ind-1] + char)
+        elif char.isdecimal():
+            num_to_word = num2words(char)
             synonyms[0] += " " + num_to_word + " "
             synonyms[1] += num_to_word + " "
             synonyms[2] += num_to_word + " "

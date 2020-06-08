@@ -154,7 +154,11 @@
                     "values": [
                         {
                             "name": {
-                                "value": "Luminous intensity"
+                                "value": "FluidTemp",
+                                "synonyms": [
+                                    "temperature of fluid",
+                                    "fluid temperature"
+                                ]
                             }
                         },
                         {
@@ -169,6 +173,7 @@
                             "name": {
                                 "value": "Temperature",
                                 "synonyms": [
+                                    "degrees",
                                     "degrees celsius"
                                 ]
                             }
