@@ -57,6 +57,17 @@ class BeerManager:
             '3': 'FluidTemp'
         }
 
+        self.set_edit_service_actions = {
+            'this': self.edit_service,
+            '1': self.edit_service_id,
+            '2': self.edit_service_resources,
+            '3': self.edit_service_ths_steps,
+            '4': self.edit_service_uncert_ranges,
+            '5': self.edit_service_trend_flag,
+            '9': self.access_obtained_menu,
+            '0': self.exit,
+        }
+
         self.username = None
         self.user_dict = None
         self.device_dict = None
@@ -81,7 +92,7 @@ class BeerManager:
         ch = choice.lower()
 
         try:
-            menu_actions[ch]()
+            return menu_actions[ch]()
         except KeyError:
             print("Invalid selection, please try again.\n")
             menu_actions['this']()
@@ -184,8 +195,6 @@ class BeerManager:
                 except ValueError:
                     print(" Port should be an integer. Try again!")
 
-            # verifica la validità dell'indirizzo
-
             rc = set_b.verify(broker_addr, port)
             if rc == 0:
                 print('VALID message broker')
@@ -211,7 +220,10 @@ class BeerManager:
         print("\t [0] Quit")
         choice = input(" >>  ")
         self.exec_menu(self.back_quit, choice)
+        
 
+    ### Devices settings ###
+    
     def edit_id(self):
         if self.device_dict is not None:
             print(f"Current device ID: {self.device_dict['deviceID']}\n")
@@ -294,7 +306,7 @@ class BeerManager:
                 else:
                     print("Invalid selection, it must be a number.\n")
                 pass
-            self.device_dict['time_steps'][chosen_res] = choice2
+            self.device_dict['time_steps'][chosen_res] = int(choice2)
             body = json.dumps(self.device_dict)
             response = requests.put(self.device_dict['end_point'] + '/update_settings', body)
             if response.status_code == 200:
@@ -454,11 +466,7 @@ class BeerManager:
         return status
 
 
-
-
-
-
-     # TODO
+    # Services settings #
 
     def set_services(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -473,12 +481,120 @@ class BeerManager:
         choice = input(" >>  ")
         self.exec_menu(self.set_services_actions, choice)
 
-    
+    def edit_service_id(self):
+        while True:
+            dev_id = input("Insert the ID of the device related to the service: ")
+            if " " not in dev_id:
+                break
+            else:
+                print('  The ID must be continous, try again!')
+        return dev_id
+
+    def edit_service_resources(self):
+        print("Select the resources typing a list of numbers separated by whitespaces:")
+        for res in self.device_resources:
+            print(f'\t [{res}] {self.device_resources[res]}')
+        while True:
+            choice = input(" >>  ")
+            keys = choice.split()
+            try:
+                resources = [self.device_resources[key] for key in keys]
+                break
+            except KeyError:
+                print("  Invalid selection, please try again.")
+                print("  Insert a list of numbers separated by whitespaces.")
+        return resources
+
+    def edit_service_ths_steps(self, resources):
+        ths_times = {}
+        for res in resources:
+            print(f"Insert the number of thresholds steps for {res}:")
+            while True:
+                choice = input(" >>  ")
+                if choice.isnumeric():
+                    n = int(choice)
+                    ths_times[res] = [0] * n
+                    break
+                else:
+                    print("  Invalid input, it must be an integer.")
+        return ths_times
+
+    def edit_service_uncert_ranges(self, resources):
+        uncertainty = {}
+        for res in resources:
+            print(f"Insert the uncertainty range for {res}:")
+            while True:
+                choice = input(" >>  ")
+                if choice.isnumeric():
+                    n = int(choice)
+                    uncertainty[res] = n
+                    break
+                else:
+                    print("  Invalid input, it must be an integer.")
+        return uncertainty
+
+    def edit_service_trend_flag(self):
+        print(f"Does the service provide some trends information? (0:no, 1:yes):")
+        while True:
+            choice = input(" >>  ")
+            if choice == '0' or choice == '1':
+                trend_flag = int(choice)
+                break
+            else:
+                print("  Invalid input, it must be 0 or 1.")
+        return trend_flag
+
     def add_service(self):
-        # TODO
-        pass
+        print("  --------------- Add service ---------------\n")
+        # Location choice
+        print("Select the location of the new service:\n")
+        for loc in self.device_locations:
+            print(f'\t [{loc}] {self.device_locations[loc]}')
+        while True:
+            choice = input(" >>  ")
+            try:
+                location = self.device_locations[choice]
+                break
+            except KeyError:
+                print("  Invalid selection, please try again.")
 
+        # ID choice
+        dev_id = self.edit_service_id()
 
+        # Resources choice
+        resources = self.edit_service_resources()
+
+        # Number of steps choice
+        ths_times = self.edit_service_ths_steps(resources)
+
+        # Uncertainty ranges choice
+        uncertainty = self.edit_service_uncert_ranges(resources)
+
+        # Trend choice
+        trend_flag = self.edit_service_trend_flag()
+        
+        service_dict = {
+                            "deviceID": dev_id,
+                            "active_resources": resources,
+                            "thresholds": ths_times,
+                            "incert_ranges": uncertainty,
+                            "timings": ths_times,
+                            "trend_flag": trend_flag,
+                            "status": 2
+                        }
+
+        body = json.dumps(service_dict)
+        response = requests.put(CATALOG_URL + self.username + '/services/' + location + '/' + dev_id,
+                                body)
+        if response.status_code == 200:
+            print(" Service added!")
+        else:
+            response.raise_for_status()
+        print("\n\t [9] Back")
+        print("\t [0] Quit")
+        choice = input(" >>  ")
+        self.exec_menu(self.back_quit, choice)
+        
     def edit_service(self):
         print("  --------------- Edit service ---------------\n")
         print("   Please choose the service you want to edit:\n")
@@ -495,9 +611,52 @@ class BeerManager:
                 print(" Insert an integer. Try again!")
         
         devID_to_edit = services[choice]
+        for loc,service in self.user_dict['services'].items():
+            for dev in service:
+                if dev['deviceID'] == devID_to_edit:
+                    service_to_edit = dev
+                    location = loc
+                    
+        if service_to_edit['status'] != 2:
+            print("The service is currently active. It can't be edited.\n")
+        else:
+            print('\t [1] Edit resources')
+            print('\t [2] Edit number of thresholds steps')
+            print('\t [3] Edit uncertainty ranges')
+            print('\t [4] Edit trend flag')
+            print("\n\t [9] Back")
+            print("\t [0] Quit")
 
-        # TODO
+            choice = input(" >>  ")
 
+            if choice == '1':
+                resources = self.edit_service_resources()
+                service_to_edit['active_resources'] = resources
+                service_to_edit['thresholds'] = self.edit_service_ths_steps(resources)
+                service_to_edit['timings'] = service_to_edit['thresholds']
+                service_to_edit['incert_ranges'] = self.edit_service_uncert_ranges(resources)
+            elif choice == '2':
+                resources = service_to_edit['active_resources']
+                service_to_edit['thresholds'] = self.edit_service_ths_steps(resources)
+                service_to_edit['timings'] = service_to_edit['thresholds']
+            elif choice == '3':
+                resources = service_to_edit['active_resources']
+                service_to_edit['incert_ranges'] = self.edit_service_uncert_ranges(resources)
+            elif choice == '4':
+                service_to_edit['trend_flag'] = self.edit_service_trend_flag()
+
+            body = json.dumps(service_to_edit)
+            response = requests.put(CATALOG_URL + self.username + '/services/' + location + '/' + devID_to_edit,
+                                    body)
+            if response.status_code == 200:
+                print(" Service edited!")
+            else:
+                response.raise_for_status()
+                
+        print("\n\t [9] Back")
+        print("\t [0] Quit")
+        choice = input(" >>  ")
+        self.exec_menu(self.back_quit, choice)
 
     def remove_service(self):
         print("  --------------- Remove service ---------------\n")
@@ -531,8 +690,8 @@ class BeerManager:
         choice = input(" >>  ")
         self.exec_menu(self.back_quit, choice)
 
-
     def current_services(self):
+        self.user_dict = requests.get(CATALOG_URL + self.username).json()
         i = 0
         services_dict = {}
         for service in self.user_dict['services']:
